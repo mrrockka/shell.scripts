@@ -21,60 +21,89 @@ param(
 	[switch]$attach,
 	
 	[Parameter()]
+	[switch]$norun,	
+	
+	[Parameter()]
+	[switch]$nobuild,
+	
+	[Parameter()]
 	[string]$file
 )
 
-$DOCKER_BUILDKIT=1
+### PARAMS VALIDATION
+if(($logs.isPresent) -and ($attach.isPresent)){
+	echoc "SCRIPT ERROR:" Red; echo " Can't attach to container's logs and attach with shell at same time. Remove one of [logs, attach] flags"
+	exit 
+}
 
-Set-Variable "mvnCommand" "mvn clean package "
+### MAVEN BUILD
+$mvnCmd = "mvn clean package "
 if($skipTests.isPresent){
-	$mvnCommand += "'-Dmaven.test.skip=true'"
+	$mvnCmd += "'-Dmaven.test.skip=true'"
 }
 
 if($mvn.isPresent){
-	iex $mvnCommand
+	echoc "###`nRunning ${mvnCmd}`n###" Yellow -newline
+	iex $mvnCmd
+}
+### ---
+
+### DOCKER BUILD
+$buildParams = @()
+if ($imageName -ne $null) {
+	$buildParams += "-t " + $imageName.trim()
 }
 
-Set-Variable "debugPort" $port
+if ($nocache.isPresent) {
+	$buildParams += "--no-cache"
+}
+
+if ($file -ne $null) {
+	$buildParams += "-f " + $file.trim()
+}
+
+#Agregating build options
+$buildCmd = "docker build"
+$buildParams | % { $buildCmd += ' ' + $_ }; $buildCmd += " ."
+
+if(!$nobuild.isPresent){
+	echoc "###`nRunning ${buildCmd}`n###" Yellow -newline
+	iex $buildCmd
+}
+
+### ---
+
+docker_clear $imageName
+
+### DOCKER RUN
+$runParams = @()
+
+#Configuring ports of container
+$debugPort = $port
 if ($port -eq '80'){
 	$debugPort = '005'
 }
 
+$runParams += "-p ${port}:8080" 
+$runParams += "-p 5${debugPort}:5005"
 
-docker ps -a -f ancestor=$imageName -q | Set-Variable "containers"
-if ($containers -ne $null) {
-	$containers | % { docker stop $_ }
+if(!$logs.isPresent) {
+	$runParams += "-d"
 }
 
-$buildParam = @()
-if ($imageName -ne $null) {
-	$buildParam += "-t " + $imageName.trim()
+#Agregating run options
+$runCmd = "docker run --rm"
+$runParams | % { $runCmd += ' ' + $_ }; $runCmd += " ${imageName}"
+
+if(!$norun.isPresent){
+	echoc "###`nRunning ${runCmd}`n###" Yellow -newline
+	iex $runCmd | Set-Variable "token"
+	echo "Container token " $token
 }
 
-if ($nocache.isPresent) {
-	$buildParam += "--no-cache"
-}
+### ---
 
-if ($file -ne $null) {
-	$buildParam += "-f " + $file.trim()
-}
-
-$buildCmd = "docker build"
-$buildParam | % { $buildCmd += ' ' + $_ } 
-
-$buildCmd += ' --ssh default="$ENV:USERPROFILE\.ssh\dd.bitbucket" .'
-echo 'Final cmd is ' $buildCmd
-
-iex $buildCmd
-
-docker run --rm -d -p "${port}:8080" -p "5${debugPort}:5005" $imageName | % { Set-Variable "token" $_ }; docker images --filter "dangling=true" -q | % { docker rmi $_ }
-
-echo $token
-
-if ($logs.isPresent) {
-	docker logs -f $token
-}
-
+###ATTACH WITH SHELL TO CONTAINER
 if ($attach.isPresent) {
 	docker_attach $imageName
 }
