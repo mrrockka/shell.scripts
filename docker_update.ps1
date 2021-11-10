@@ -9,6 +9,9 @@ param(
 	[switch]$logs,
 
 	[Parameter()]
+	[switch]$dbg,
+
+	[Parameter()]
 	[switch]$mvn,
 
 	[Parameter()]
@@ -31,8 +34,23 @@ param(
 )
 
 ### PARAMS VALIDATION
-if(($logs.isPresent) -and ($attach.isPresent)){
-	echoc "SCRIPT ERROR:" Red; echo " Can't attach to container's logs and attach with shell at same time. Remove one of [logs, attach] flags"
+$params = [PSCustomObject]@{
+	Name = "logs" 
+	Value = $logs
+}, 
+[PSCustomObject]@{
+	Name = "attach" 
+	Value = $attach
+}, 
+[PSCustomObject]@{
+	Name = "dbg" 
+	Value = $dbg
+}
+$break = $temp; $params | % {$temp += [int]$_.Value.isPresent}; if($temp -gt 1) { $true } else { $false }
+
+if($break){
+	$message = ($params | % { $_.Name + ' ' }).trim()
+	echoc "SCRIPT ERROR:" Red; echo " Can't attach to container's logs and attach with shell at same time. Remove one of [${message}] flags"
 	exit 
 }
 
@@ -58,7 +76,7 @@ if ($nocache.isPresent) {
 	$buildParams += "--no-cache"
 }
 
-if ($file -ne $null) {
+if ($file) {
 	$buildParams += "-f " + $file.trim()
 }
 

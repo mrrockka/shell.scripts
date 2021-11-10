@@ -1,6 +1,6 @@
 param(
-	[Parameter(Mandatory)]
-	[string]$ancestor,
+	[Parameter()]
+	[string]$ancestor = (Get-Item -Path '.\' -Verbose).Name,
 	
 	[Parameter()]
 	[string]$console = '/bin/bash'
