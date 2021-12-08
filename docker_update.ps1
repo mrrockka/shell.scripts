@@ -30,7 +30,13 @@ param(
 	[switch]$nobuild,
 	
 	[Parameter()]
-	[string]$file
+	[switch]$noclean,
+	
+	[Parameter()]
+	[string]$file,
+	
+	[Parameter()]
+	[string]$args = ''
 )
 
 ### PARAMS VALIDATION
@@ -45,8 +51,13 @@ $params = [PSCustomObject]@{
 [PSCustomObject]@{
 	Name = "dbg" 
 	Value = $dbg
+}, 
+[PSCustomObject]@{
+	Name = "norun" 
+	Value = $norun
 }
-$break = $temp; $params | % {$temp += [int]$_.Value.isPresent}; if($temp -gt 1) { $true } else { $false }
+
+$break = $temp = 0; $params | % {$temp += [int]$_.Value.isPresent; echo [int]$_.Value}; echo $temp; if($temp -gt 1) { $true } else { $false }
 
 if($break){
 	$message = ($params | % { $_.Name + ' ' }).trim()
@@ -68,6 +79,12 @@ if($mvn.isPresent){
 
 ### DOCKER BUILD
 $buildParams = @()
+
+
+if($args){
+	$buildParams += "--build-arg ${args}"	
+}
+
 if ($imageName -ne $null) {
 	$buildParams += "-t " + $imageName.trim()
 }
@@ -91,8 +108,9 @@ if(!$nobuild.isPresent){
 
 ### ---
 
-docker_clear $imageName
-
+if(!$noclean.isPresent){
+	docker_clean -dandling
+}
 ### DOCKER RUN
 $runParams = @()
 
@@ -105,21 +123,28 @@ if ($port -eq '80'){
 $runParams += "-p ${port}:8080" 
 $runParams += "-p 5${debugPort}:5005"
 
-if(!$logs.isPresent) {
-	$runParams += "-d"
-}
-
 #Agregating run options
 $runCmd = "docker run --rm"
 $runParams | % { $runCmd += ' ' + $_ }; $runCmd += " ${imageName}"
 
-if(!$norun.isPresent){
+if($dbg.isPresent) {
+	$runCmd = "docker run -it ${imageName}"
+	echoc "###`nRunning ${runCmd}`n###" Yellow -newline
+	iex $runCmd
+} 
+
+if(!$norun.isPresent -and !$dbg.isPresent){
 	echoc "###`nRunning ${runCmd}`n###" Yellow -newline
 	iex $runCmd | Set-Variable "token"
 	echo "Container token " $token
 }
 
 ### ---
+
+###ATTACH WITH SHELL TO CONTAINER
+if ($logs.isPresent) {
+	docker logs -f $token
+}
 
 ###ATTACH WITH SHELL TO CONTAINER
 if ($attach.isPresent) {

@@ -10,34 +10,73 @@ param(
 	
 	[Parameter()]
 	[switch]$recreate,
+		
+	[Parameter()]
+	[switch]$attach,
 	
 	[Parameter()]
 	[switch]$nocache
 )
 
 
-Set-Variable "mvnCommand" "mvn clean package"
+### MAVEN BUILD
+
+$mvnCmd = "mvn clean package"
 if($skipTests.isPresent){
-	$mvnCommand += " '-Dmaven.test.skip=true'"
+	$mvnCmd += " '-Dmaven.test.skip=true'"
 }
 if($mvn.isPresent){
-	iex $mvnCommand
+	echoc "###`nRunning ${mvnCmd}`n###" Yellow -newline
+	iex $mvnCmd
 }
 
-Set-Variable "runCmd" "docker-compose build"
-if($nocache.isPResent) {
-	$runCmd += " --no-cache"
+### ---
+
+### DOCKER COMPOSE PREPARATIONS
+docker compose stop
+
+$logFolder = $PWD.Path + "\logs"
+
+if(Test-Path -Path $logFolder){
+	Remove-Item -Path $logFolder -Recurse
 }
 
-$runCmd += ';docker compose up --remove-orphans'
-if(!$logs.isPResent) {
+docker_clean -images -containers
+
+### ---
+
+### DOCKER COMPOSE BUILD
+$buildCmd = "docker compose build"
+if($nocache.isPresent) {
+	$buildCmd += " --no-cache"
+}
+
+if($recreate.isPresent) {
+	$buildCmd += " --force-rm"
+}
+
+echoc "###`nRunning ${buildCmd}`n###" Yellow -newline
+iex $buildCmd
+
+### ---
+
+### DOCKER COMPOSE UP
+
+$runCmd = 'docker compose up --remove-orphans'
+if(!$logs.isPresent) {
 	$runCmd += " --detach"
 }
 
-if($recreate.isPResent) {
+if($recreate.isPresent) {
 	$runCmd += " --force-recreate"
 }
 
+echoc "###`nRunning ${runCmd}`n###" Yellow -newline
 iex $runCmd
 
-docker images --filter "dangling=true" -q | % { docker rmi $_ }
+### ---
+
+if($attach.isPresent) {
+	docker_attach (docker compose ps --services)
+}
+
