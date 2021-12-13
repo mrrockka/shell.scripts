@@ -27,7 +27,10 @@ if($skipTests.isPresent){
 }
 if($mvn.isPresent){
 	echoc "###`nRunning ${mvnCmd}`n###" Yellow -newline
+	$folder = (Get-Item -Path './' -Verbose).Name
+	cd ..
 	iex $mvnCmd
+	cd $folder
 }
 
 ### ---
@@ -35,13 +38,7 @@ if($mvn.isPresent){
 ### DOCKER COMPOSE PREPARATIONS
 docker compose stop
 
-$logFolder = $PWD.Path + "\logs"
-
-if(Test-Path -Path $logFolder){
-	Remove-Item -Path $logFolder -Recurse
-}
-
-docker_clean -images -containers
+docker_clean -containers -logs
 
 ### ---
 
@@ -79,4 +76,3 @@ iex $runCmd
 if($attach.isPresent) {
 	docker_attach (docker compose ps --services)
 }
-

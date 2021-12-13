@@ -12,7 +12,10 @@ param(
 	[switch]$dandling,
 	
 	[Parameter()]
-	[switch]$volumes
+	[switch]$volumes,
+	
+	[Parameter()]
+	[switch]$logs
 )
 
 
@@ -22,7 +25,6 @@ if($dandling.isPresent){
 	$dangling | % {docker ps -a -f ancestor=$_ -q} | %{docker stop $_; docker rm $_}
 	$dangling | % { docker rmi $_ }
 }
-
 
 if($containers.isPresent -or $all.isPresent){
 	docker ps -a -q | %{docker stop $_; docker rm $_}
@@ -36,6 +38,14 @@ if($volumes.isPresent -or $all.isPresent){
 	docker volume ls -q | %{ docker volume rm $_ }
 }
 
+if($logs.isPresent -or $all.isPresent){
+	
+	$logFolder = $PWD.Path + "\..\logs"
+
+	if(Test-Path -Path $logFolder){
+		Remove-Item -Path $logFolder -Recurse
+	}
+}
 
 
 
