@@ -15,6 +15,9 @@ param(
 	[switch]$attach,
 	
 	[Parameter()]
+	[switch]$nobuild,
+	
+	[Parameter()]
 	[switch]$nocache
 )
 
@@ -38,7 +41,7 @@ if($mvn.isPresent){
 ### DOCKER COMPOSE PREPARATIONS
 docker compose stop
 
-docker_clean -containers -logs
+docker_clean -containers -dandling -logs -volumes
 
 ### ---
 
@@ -52,8 +55,10 @@ if($recreate.isPresent) {
 	$buildCmd += " --force-rm"
 }
 
-echoc "###`nRunning ${buildCmd}`n###" Yellow -newline
-iex $buildCmd
+if(!$nobuild.isPresent){
+	echoc "###`nRunning ${buildCmd}`n###" Yellow -newline
+	iex $buildCmd
+}
 
 ### ---
 
