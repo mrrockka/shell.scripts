@@ -141,7 +141,7 @@ if(!$norun.isPresent -and !$dbg.isPresent){
 
 ### ---
 
-###ATTACH WITH SHELL TO CONTAINER
+###ATTACH TO CONTAINER LOGS
 if ($logs.isPresent) {
 	docker logs -f $token
 }

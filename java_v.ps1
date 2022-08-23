@@ -3,11 +3,24 @@ param(
 	[string]$value
 )
 
-Set-Variable "javaPath" ([Environment]::GetEnvironmentVariable("JAVA_HOME", "User"));
-Set-Variable "changeValue" (($javaPath -replace "(java)([\d]+)", '$1')+$value);
+$newHome = (([Environment]::GetEnvironmentVariable("JAVA_HOME", "User")) -replace "([\d]+)", $value);
+[Environment]::SetEnvironmentVariable("JAVA_HOME", $newHome, "User");
+[Environment]::SetEnvironmentVariable("JAVA_HOME", $newHome, "Process");
 
-[Environment]::SetEnvironmentVariable("JAVA_HOME", $changeValue, "User");
-[Environment]::SetEnvironmentVariable("JAVA_HOME", $changeValue, "Process");
 
-echo ("Java Path was " + $javaPath);
+$arr = path_tool;
+$newPath = ((path_tool "java([\d]+)") -replace "([\d]+)", $value);
+
+for ( $index = 0; $index -lt $arr.count; $index++)
+{
+	if($arr[$index] -match "java([\d]+)"){
+		$arr[$index] = $newPath;
+	}
+	
+}
+
+[Environment]::SetEnvironmentVariable("Path", $($arr -join ';'), "User");
+[Environment]::SetEnvironmentVariable("Path", $($arr -join ';'), "Process");
+
+
 echo ("Java Path now " + [Environment]::GetEnvironmentVariable("JAVA_HOME", "User"));

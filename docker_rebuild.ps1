@@ -3,29 +3,29 @@ param(
 	[switch]$mvn,
 
 	[Parameter()]
-	[switch]$skipTests,
+	[switch]$notest,
 	
 	[Parameter()]
 	[switch]$logs,
 	
 	[Parameter()]
-	[switch]$recreate,
-		
-	[Parameter()]
-	[switch]$attach,
+	[String]$attach,
 	
 	[Parameter()]
 	[switch]$nobuild,
 	
 	[Parameter()]
-	[switch]$nocache
+	[switch]$norun,
+	
+	[Parameter()]
+	[switch]$usecache
 )
 
 
 ### MAVEN BUILD
 
 $mvnCmd = "mvn clean package"
-if($skipTests.isPresent){
+if($notest.isPresent){
 	$mvnCmd += " '-Dmaven.test.skip=true'"
 }
 if($mvn.isPresent){
@@ -46,13 +46,9 @@ docker_clean -containers -dandling -logs -volumes
 ### ---
 
 ### DOCKER COMPOSE BUILD
-$buildCmd = "docker compose build"
-if($nocache.isPresent) {
+$buildCmd = "docker-compose build --force-rm"
+if(!$usecache.isPresent) {
 	$buildCmd += " --no-cache"
-}
-
-if($recreate.isPresent) {
-	$buildCmd += " --force-rm"
 }
 
 if(!$nobuild.isPresent){
@@ -64,20 +60,18 @@ if(!$nobuild.isPresent){
 
 ### DOCKER COMPOSE UP
 
-$runCmd = 'docker compose up --remove-orphans'
+$runCmd = 'docker-compose up --remove-orphans --force-recreate'
 if(!$logs.isPresent) {
 	$runCmd += " --detach"
 }
 
-if($recreate.isPresent) {
-	$runCmd += " --force-recreate"
+if(!$norun.isPresent){
+	echoc "###`nRunning ${runCmd}`n###" Yellow -newline
+	iex $runCmd
 }
 
-echoc "###`nRunning ${runCmd}`n###" Yellow -newline
-iex $runCmd
 
 ### ---
-
-if($attach.isPresent) {
-	docker_attach (docker compose ps --services)
+if($attach -and !$logs.isPresent) {
+	docker_attach $attach
 }

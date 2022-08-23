@@ -20,6 +20,7 @@ param(
 
 
 ### CLEARS CONTAINERS AND IMAGES FROM PREVIOUS VERSION OF IMAGE
+echoc "###`nStarting to clear`n###" Blue -newline
 if($dandling.isPresent){
 	docker images -f "dangling=true" -q | Set-Variable "dangling"
 	$dangling | % {docker ps -a -f ancestor=$_ -q} | %{docker stop $_; docker rm $_}
@@ -48,5 +49,4 @@ if($logs.isPresent -or $all.isPresent){
 }
 
 
-
-echo "Clear is Done"
+echoc "###`nClear is Done`n###" Blue -newline
