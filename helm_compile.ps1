@@ -6,7 +6,11 @@ param(
 	[switch]$noclean,
 	
 	[Parameter()]
-	[string]$output = 'target'
+	[string]$output = 'target',
+	
+	[Parameter()]
+	[string]$showOnly
+	
 )
 
 if(!$noclean.isPresent){
@@ -21,4 +25,12 @@ if(!$noupd.isPresent){
 	helm dependency update
 }
 
-helm template . --output-dir $output --debug
+$cmd = 'helm template . --output-dir $output --debug' 
+
+if( $showOnly ) {
+	$cmd += '-s $showOnly'
+}
+
+iex $cmd
+
+

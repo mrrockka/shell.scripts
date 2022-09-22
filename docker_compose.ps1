@@ -9,6 +9,9 @@ param(
 	[switch]$logs,
 	
 	[Parameter()]
+	[String]$only,
+	
+	[Parameter()]
 	[String]$attach,
 	
 	[Parameter()]
@@ -46,7 +49,7 @@ docker_clean -containers -dandling -logs -volumes
 ### ---
 
 ### DOCKER COMPOSE BUILD
-$buildCmd = "docker-compose build --force-rm"
+$buildCmd = "docker compose build --force-rm"
 if(!$usecache.isPresent) {
 	$buildCmd += " --no-cache"
 }
@@ -60,7 +63,14 @@ if(!$nobuild.isPresent){
 
 ### DOCKER COMPOSE UP
 
-$runCmd = 'docker-compose up --remove-orphans --force-recreate'
+$runCmd = "docker compose up "
+
+if($only){
+	$runCmd += "${only} "
+}
+
+$runCmd += "--remove-orphans --force-recreate"
+
 if(!$logs.isPresent) {
 	$runCmd += " --detach"
 }
